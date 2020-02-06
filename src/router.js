@@ -7,6 +7,7 @@ import { i18n } from './lang/';
 import EventBus from './events/';
 import Collections from './routes/collections.vue';
 import Items from './routes/items.vue';
+import ItemsCSV from './routes/items-csv.vue';
 import FileLibrary from './routes/file-library.vue';
 import Item from './routes/item.vue';
 import Login from './routes/login.vue';
@@ -48,6 +49,11 @@ const router = new Router({
 			path: '/:project/collections/:collection',
 			props: true,
 			component: Items
+		},
+		{
+			path: '/:project/collections/:collection/csv',
+			props: true,
+			component: ItemsCSV
 		},
 		{
 			path: '/:project/collections/:collection/:primaryKey',

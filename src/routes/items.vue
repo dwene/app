@@ -557,8 +557,11 @@ export default {
 		}
 	},
 	methods: {
-		uploadCSV() {
-			// TODO: need to figure out what we're going to do for this
+		uploadCSV(event) {
+			if (!this.$store.state.currentUser.admin) return;
+			this.$router.push(
+				`/${this.currentProjectKey}/settings/collections/${this.collection}/csv`
+			);
 		},
 		keyBy: keyBy,
 		setMeta(meta) {

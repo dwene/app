@@ -13,6 +13,7 @@ import componentExists from './component-exists';
 import formatFilters from './format-filters';
 import formatField from './format-field';
 import formatCollection from './format-collection';
+import parseCSV from './parse-csv';
 
 const helpers = {
 	formatTitle,
@@ -29,7 +30,8 @@ const helpers = {
 	mousetrap,
 	dateFns,
 	formatField,
-	formatCollection
+	formatCollection,
+	parseCSV
 };
 
 const helpersPlugin = {
