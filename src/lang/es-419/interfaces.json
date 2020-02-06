@@ -182,8 +182,10 @@
 			"filters_comment": "Qué filtros usar",
 			"accept": "Aceptar los Tipos de Archivo",
 			"accept_comment": "Estableces una lista de tipos MIME que puedan ser elegidos",
-			"allow_delete": "Permitir Eliminar",
-			"allow_delete_comment": "Permite al usuario eliminar permanentemente el archivo relacionado a través de la interfaz de archivos"
+			"allow_delete": "Allow Delete",
+			"allow_delete_comment": "Allows the user to permanently delete the related file through the file interface",
+			"crop_preview": "Crop File Preview",
+			"crop_preview_comment": "Crops the file preview to fill the available space."
 		},
 		"file-preview": {
 			"file_preview": "Vista previa del archivo",
@@ -479,8 +481,8 @@
 			"force_lowercase_comment": "Asegúrese de que el slug está en minúsculas",
 			"mirrored_field": "Campo Espejado",
 			"mirrored_field_comment": "Mantener el slug actualizado con otro campo (de texto)",
-			"only_on_create": "Sólo en Crear",
-			"only_on_create_comment": "Permitir que la slug se edite sólo cuando se crea un nuevo elemento"
+			"only_on_create": "Only on Create",
+			"only_on_create_comment": "Allow the slug to be edited only when creating a new item"
 		},
 		"sort": {
 			"sort": "Ordenar"
@@ -633,8 +635,8 @@
 			"toolbar_comment": "Mostrar, ocultar, y re-ordenar las opciones de la barra de herramientas",
 			"custom_formats": "Formatos Personalizados",
 			"custom_formats_comment": "Envolturas HTML personalizadas para el contenido",
-			"tinymce_options": "Opciones TinyMCE",
-			"tinymce_options_comment": "Anular cualquiera de [las opciones de inicio del TinyMCE](https://www.tiny.cloud/docs/configure/)."
+			"tinymce_options": "TinyMCE Options",
+			"tinymce_options_comment": "Override any of [the TinyMCE init options](https://www.tiny.cloud/docs/configure/)."
 		}
 	}
 }
