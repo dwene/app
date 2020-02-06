@@ -104,7 +104,7 @@ export default {
 	li {
 		display: block;
 	}
-	i {
+	.v-icon {
 		color: var(--popover-text-color);
 		margin-right: 8px;
 		transition: color var(--fast) var(--transition);

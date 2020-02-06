@@ -9,7 +9,7 @@
 		<v-contextual-menu
 			v-if="Object.keys(options).length > 0"
 			class="options"
-			placement="bottom-start"
+			placement="bottom-end"
 			:options="options"
 			@click="emitChange"
 		></v-contextual-menu>
