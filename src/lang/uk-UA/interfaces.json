@@ -183,7 +183,9 @@
 			"accept": "Accept File Types",
 			"accept_comment": "Set a list of MIME types that can be picked",
 			"allow_delete": "Allow Delete",
-			"allow_delete_comment": "Allows the user to permanently delete the related file through the file interface"
+			"allow_delete_comment": "Allows the user to permanently delete the related file through the file interface",
+			"crop_preview": "Crop File Preview",
+			"crop_preview_comment": "Crops the file preview to fill the available space."
 		},
 		"file-preview": {
 			"file_preview": "Перегляд файлу",
