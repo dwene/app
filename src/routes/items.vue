@@ -69,8 +69,10 @@
 					icon="add"
 					icon-color="button-primary-text-color"
 					background-color="button-primary-background-color"
+					:options="addButtonOptions"
 					:label="$t('new')"
 					:to="createLink"
+					@input="uploadCSV"
 				/>
 			</template>
 		</v-header>
@@ -186,6 +188,9 @@ export default {
 		};
 	},
 	computed: {
+		addButtonOptions() {
+			return { uploadCSV: { text: this.$t('Upload CSV'), icon: 'cloud_upload' } };
+		},
 		...mapState(['currentProjectKey']),
 		activity() {
 			return this.collection === 'directus_activity';
@@ -552,6 +557,9 @@ export default {
 		}
 	},
 	methods: {
+		uploadCSV() {
+			// TODO: need to figure out what we're going to do for this
+		},
 		keyBy: keyBy,
 		setMeta(meta) {
 			this.meta = meta;
