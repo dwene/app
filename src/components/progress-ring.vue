@@ -75,7 +75,7 @@ export default {
 		},
 		iconSize() {
 			// Material design icons should be rendered in increments of 6 for visual clarity
-			return 6 * Math.round(this.radius / 6) + 'px';
+			return 6 * Math.round(this.radius / 6);
 		}
 	}
 };
