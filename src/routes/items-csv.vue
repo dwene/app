@@ -372,6 +372,8 @@ export default {
 			const response = await fetch(full_url);
 			const text = await response.text();
 			console.log(text);
+			const test = this.$helpers.parseCSV(text);
+			console.log(test);
 		},
 		keyBy: keyBy,
 		setMeta(meta) {
