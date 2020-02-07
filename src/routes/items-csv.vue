@@ -62,7 +62,7 @@
 				@query="setViewQuery"
 				@options="setViewOptions"
 			/>
-		</v-info-sidebar> -->
+		</v-info-sidebar>-->
 		<v-info-sidebar wide>
 			<span class="type-note">No settings</span>
 		</v-info-sidebar>
@@ -79,7 +79,7 @@
 				@cancel="confirmRemove = false"
 				@confirm="remove"
 			/>
-		</portal> -->
+		</portal>-->
 	</div>
 </template>
 
@@ -360,8 +360,18 @@ export default {
 			//TODO: figure out how to save the CSV data to the collection
 			console.log('save CSV data to collection');
 		},
-		CSVUploaded(e) {
-			console.log('CSVUploaded', e);
+		async CSVUploaded(fileData) {
+			console.log(fileData);
+			const {
+				data: {
+					data: {
+						data: { full_url }
+					}
+				}
+			} = fileData;
+
+			const text = await this.$api.getFileText(full_url);
+			console.log(text);
 		},
 		keyBy: keyBy,
 		setMeta(meta) {

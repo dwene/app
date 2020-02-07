@@ -559,9 +559,7 @@ export default {
 	methods: {
 		uploadCSV(event) {
 			if (!this.$store.state.currentUser.admin) return;
-			this.$router.push(
-				`/${this.currentProjectKey}/settings/collections/${this.collection}/csv`
-			);
+			this.$router.push(`/${this.currentProjectKey}/collections/${this.collection}/csv`);
 		},
 		keyBy: keyBy,
 		setMeta(meta) {
