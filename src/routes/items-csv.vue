@@ -27,8 +27,7 @@
 		</v-header>
 
 		<div class="items-csv">
-			<label for="csv-select">Select a csv:</label>
-			<input type="file" id="csv-select" name="csv-select" accept=".csv" />
+			<v-upload accept="text/csv" :multiple="false" @upload="CSVUploaded" />
 		</div>
 
 		<!-- <v-info-sidebar v-if="preferences">
@@ -360,6 +359,9 @@ export default {
 		saveCSVUpload() {
 			//TODO: figure out how to save the CSV data to the collection
 			console.log('save CSV data to collection');
+		},
+		CSVUploaded(e) {
+			console.log('CSVUploaded', e);
 		},
 		keyBy: keyBy,
 		setMeta(meta) {
