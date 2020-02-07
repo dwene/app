@@ -369,8 +369,8 @@ export default {
 					}
 				}
 			} = fileData;
-
-			const text = await this.$api.getFileText(full_url);
+			const response = await fetch(full_url);
+			const text = await response.text();
 			console.log(text);
 		},
 		keyBy: keyBy,
