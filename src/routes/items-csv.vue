@@ -27,59 +27,54 @@
 		</v-header>
 
 		<div class="items-csv">
-			<v-upload accept="text/csv" :multiple="false" @upload="CSVUploaded" />
+			<v-upload
+				accept="text/csv"
+				:multiple="false"
+				@upload="CSVUploaded"
+				:disabled="!!CSVData"
+			/>
+			<div v-if="!!CSVData">
+				<h2 class="type-heading-medium">
+					Field Mappings
+					<v-button v-if="checkboxes.length" @click="uncheckAllFields()">
+						{{ $t('Uncheck All') }}
+					</v-button>
+					<v-button v-if="!checkboxes.length" @click="checkAllFields()">
+						{{ $t('Check All') }}
+					</v-button>
+				</h2>
+
+				<div v-for="field in fields" :key="field.field" class="items-csv-row">
+					<v-checkbox
+						class="items-csv-checkbox"
+						:id="field.field"
+						:value="field.field"
+						:label="field.name"
+						:inputValue="checkboxes"
+						v-model="checkboxes"
+					/>
+
+					<v-simple-select
+						class="items-csv-select"
+						v-model="CSVData.mappedTitles[field.name]"
+						@input="selectCSVTitle(field.name, $event)"
+					>
+						<option
+							v-for="title in CSVData.titles"
+							:key="title"
+							:value="title"
+							:selected="CSVData.mappedTitles[field.name] === title"
+						>
+							{{ $helpers.formatTitle(title) }}
+						</option>
+					</v-simple-select>
+				</div>
+			</div>
 		</div>
 
-		<!-- <v-info-sidebar v-if="preferences">
-			<template slot="system">
-				<div class="layout-picker">
-					<select
-						:value="viewType"
-						@input="updatePreferences('view_type', $event.target.value)"
-					>
-						<option v-for="(name, val) in layoutNames" :key="val" :value="val">
-							{{ name }}
-						</option>
-					</select>
-					<div class="preview">
-						<v-icon :name="layoutIcons[viewType]" color="--sidebar-text-color" />
-						<span class="label">{{ layoutNames[viewType] }}</span>
-						<v-icon name="expand_more" color="--sidebar-text-color" />
-					</div>
-				</div>
-			</template>
-			<v-ext-layout-options
-				:key="`${collection}-${viewType}`"
-				class="layout-options"
-				:type="viewType"
-				:collection="collection"
-				:fields="keyBy(fields, 'field')"
-				:view-options="viewOptions"
-				:view-query="viewQuery"
-				:selection="selection"
-				:primary-key-field="primaryKeyField"
-				link="__link__"
-				@query="setViewQuery"
-				@options="setViewOptions"
-			/>
-		</v-info-sidebar>-->
 		<v-info-sidebar wide>
 			<span class="type-note">No settings</span>
 		</v-info-sidebar>
-
-		<!-- <portal v-if="confirmRemove" to="modal">
-			<v-confirm
-				:message="
-					$tc('batch_delete_confirm', selection.length, {
-						count: selection.length
-					})
-				"
-				color="danger"
-				:confirm-text="$t('delete')"
-				@cancel="confirmRemove = false"
-				@confirm="remove"
-			/>
-		</portal>-->
 	</div>
 </template>
 
@@ -109,8 +104,13 @@ export default {
 			meta: null,
 			// preferences: null,
 			confirmRemove: false,
-			notFound: false
+			notFound: false,
+			checkboxes: [],
+			CSVData: null
 		};
+	},
+	created() {
+		this.checkboxes = this.fields.map(({ field }) => field);
 	},
 	computed: {
 		...mapState(['currentProjectKey']),
@@ -196,8 +196,9 @@ export default {
 			}));
 
 			//Filter out hidden_browser items.
-			let filteredFields = fieldsArray.filter(field => field.hidden_browse !== true);
-
+			let filteredFields = fieldsArray.filter(
+				field => !field.hidden_browse && !field.readonly
+			);
 			return filteredFields;
 		},
 		batchURL() {
@@ -216,62 +217,6 @@ export default {
 		emptyCollection() {
 			return (this.meta && this.meta.total_count === 0) || false;
 		},
-		// searchQuery() {
-		// 	if (!this.preferences) return '';
-		// 	return this.preferences.search_query || '';
-		// },
-		// viewType() {
-		// 	if (!this.preferences) return 'tabular';
-		// 	return this.preferences.view_type || 'tabular';
-		// },
-		// viewQuery() {
-		// 	if (!this.preferences) return {};
-
-		// 	// `Fields` computed property return the fields which need to displayed. Here we want all fields.
-		// 	let fields = this.$store.state.collections[this.collection].fields;
-		// 	fields = Object.values(fields).map(field => ({
-		// 		...field,
-		// 		name: this.$helpers.formatField(field.field, field.collection)
-		// 	}));
-
-		// 	const viewQuery =
-		// 		(this.preferences.view_query && this.preferences.view_query[this.viewType]) || {};
-
-		// 	// Filter out the fieldnames of fields that don't exist anymore
-		// 	// Sorting / querying fields that don't exist anymore will return
-		// 	// a 422 in the API and brick the app
-
-		// 	const collectionFieldNames = fields.map(f => f.field);
-
-		// 	if (viewQuery.fields) {
-		// 		viewQuery.fields = viewQuery.fields
-		// 			.split(',')
-		// 			.filter(fieldName => collectionFieldNames.includes(fieldName))
-		// 			.join(',');
-		// 	}
-
-		// 	if (viewQuery.sort) {
-		// 		// If the sort is descending, the fieldname starts with -
-		// 		// The fieldnames in the array of collection field names don't have this
-		// 		// which is why we have to take it out.
-		// 		const sortFieldName = viewQuery.sort.startsWith('-')
-		// 			? viewQuery.sort.substring(1)
-		// 			: viewQuery.sort;
-
-		// 		if (collectionFieldNames.includes(sortFieldName) === false) {
-		// 			viewQuery.sort = this.primaryKeyField;
-		// 		}
-		// 	}
-
-		// 	return viewQuery;
-		// },
-		// viewOptions() {
-		// 	if (!this.preferences) return {};
-		// 	return (
-		// 		(this.preferences.view_options && this.preferences.view_options[this.viewType]) ||
-		// 		{}
-		// 	);
-		// },
 
 		filterableFieldNames() {
 			return this.fields.filter(field => field.datatype).map(field => field.field);
@@ -314,11 +259,11 @@ export default {
 
 		userCreatedField() {
 			if (!this.fields) return null;
-
-			return (
+			const fields =
 				find(Object.values(this.fields), field => field.type.toLowerCase() === 'owner') ||
-				{}
-			).field;
+				{};
+
+			return fields.field;
 		},
 		primaryKeyField() {
 			const fields = this.$store.state.collections[this.collection].fields;
@@ -371,9 +316,58 @@ export default {
 			} = fileData;
 			const response = await fetch(full_url);
 			const text = await response.text();
-			console.log(text);
-			const test = this.$helpers.parseCSV(text);
-			console.log(test);
+			const CSVData = this.$helpers.parseCSV(text);
+			this.CSVData = this.formatCSVData(CSVData);
+			console.log('>>>1', CSVData);
+			console.log('>>>2', this.fields);
+			const CSVTitles = CSVData[0];
+		},
+		formatCSVData(data) {
+			const titles = data[0];
+			const dataMap = data.reduce((acc, dataArray, index) => {
+				if (!dataArray.length) return acc;
+				if (index === 0) {
+					dataArray.forEach(title => (acc[title] = []));
+					return acc;
+				}
+				dataArray.forEach((datum, datumIndex) => acc[titles[datumIndex]].push(datum));
+				return acc;
+			}, {});
+			const matchingCSVTitles = this.mapMatchingCSVTitles(titles);
+			const mappedTitles = this.fields.reduce((acc, field) => {
+				if (matchingCSVTitles.has(field.name)) acc[field.name] = field.name;
+				else acc[field.name] = null;
+				return acc;
+			}, {});
+
+			return {
+				titles,
+				dataMap,
+				mappedTitles
+			};
+		},
+		selectCSVTitle(fieldName, title) {
+			// this.CSVData.mappedTitles[fieldName] = title;
+			console.log(this.CSVData.mappedTitles);
+		},
+		mapMatchingCSVTitles(titles) {
+			const formTitleIndexes = this.fields.reduce((acc, field, index) => {
+				acc.set(field.name, index);
+				return acc;
+			}, new Map());
+
+			return titles.reduce((acc, title) => {
+				const formTitleIndex = formTitleIndexes.get(title);
+				if (Number.isInteger(formTitleIndex)) acc.set(title, formTitleIndex);
+				return acc;
+			}, new Map());
+		},
+		checkAllFields() {
+			this.checkboxes = this.fields.map(({ field }) => field);
+			console.log('>>>5', this.checkboxes);
+		},
+		uncheckAllFields() {
+			this.checkboxes = [];
 		},
 		keyBy: keyBy,
 		setMeta(meta) {
@@ -383,85 +377,6 @@ export default {
 			if (!this.$store.state.currentUser.admin) return;
 			this.$router.push(`/${this.currentProjectKey}/settings/collections/${this.collection}`);
 		},
-		// setViewQuery(query) {
-		// 	const newViewQuery = {
-		// 		...this.preferences.view_query,
-		// 		[this.viewType]: {
-		// 			...this.viewQuery,
-		// 			...query
-		// 		}
-		// 	};
-		// 	this.updatePreferences('view_query', newViewQuery);
-		// },
-		// setViewOptions(options) {
-		// 	const newViewOptions = {
-		// 		...this.preferences.view_options,
-		// 		[this.viewType]: {
-		// 			...this.viewOptions,
-		// 			...options
-		// 		}
-		// 	};
-		// 	this.updatePreferences('view_options', newViewOptions);
-		// },
-		// updatePreferences(key, value, combine = false) {
-		// 	if (combine) {
-		// 		value = {
-		// 			...this.preferences[key],
-		// 			...value
-		// 		};
-		// 	}
-		// 	this.$set(this.preferences, key, value);
-
-		// 	// user vs role vs collection level preferences, == checks both null and undefined
-		// 	const isPreferenceFallback = this.preferences.user == null;
-		// 	if (isPreferenceFallback) {
-		// 		return this.createCollectionPreset();
-		// 	}
-
-		// 	const id = this.$helpers.shortid.generate();
-		// 	this.$store.dispatch('loadingStart', { id });
-
-		// 	return this.$api
-		// 		.updateCollectionPreset(this.preferences.id, {
-		// 			[key]: value
-		// 		})
-		// 		.then(() => {
-		// 			this.$store.dispatch('loadingFinished', id);
-		// 		})
-		// 		.catch(error => {
-		// 			this.$store.dispatch('loadingFinished', id);
-		// 			this.$events.emit('error', {
-		// 				notify: this.$t('something_went_wrong_body'),
-		// 				error
-		// 			});
-		// 		});
-		// },
-		// createCollectionPreset() {
-		// 	const id = this.$helpers.shortid.generate();
-		// 	this.$store.dispatch('loadingStart', { id });
-
-		// 	const preferences = { ...this.preferences };
-		// 	delete preferences.id;
-
-		// 	return this.$api
-		// 		.createCollectionPreset({
-		// 			...preferences,
-		// 			collection: this.collection,
-		// 			user: this.$store.state.currentUser.id
-		// 		})
-		// 		.then(({ data }) => {
-		// 			this.$store.dispatch('loadingFinished', id);
-		// 			this.$set(this.preferences, 'id', data.id);
-		// 			this.$set(this.preferences, 'user', data.user);
-		// 		})
-		// 		.catch(error => {
-		// 			this.$store.dispatch('loadingFinished', id);
-		// 			this.$events.emit('error', {
-		// 				notify: this.$t('something_went_wrong_body'),
-		// 				error
-		// 			});
-		// 		});
-		// },
 		remove() {
 			const id = this.$helpers.shortid.generate();
 			this.$store.dispatch('loadingStart', { id });
@@ -572,7 +487,32 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.v-upload.disabled {
+	opacity: 0.3;
+}
+
 .items-csv {
 	padding: var(--page-padding-top-table) var(--page-padding) var(--page-padding-bottom);
+
+	h2 {
+		margin-top: 32px;
+		display: flex;
+		justify-content: space-between;
+	}
+
+	&-row {
+		width: 100%;
+		margin-top: 16px;
+		display: flex;
+		align-items: center;
+	}
+
+	&-checkbox {
+		width: 200px;
+	}
+
+	&-select {
+		width: 200px;
+	}
 }
 </style>
