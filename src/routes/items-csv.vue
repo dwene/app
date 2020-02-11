@@ -9,7 +9,9 @@
 			:settings="collection === 'directus_webhooks'"
 			:title="$helpers.formatTitle(collection)"
 			:icon-link="
-				collection === 'directus_webhooks' ? `/${currentProjectKey}/settings/` : null
+				collection === 'directus_webhooks'
+					? `/${currentProjectKey}/settings/`
+					: null
 			"
 		>
 			<template slot="buttons">
@@ -33,17 +35,61 @@
 				:disabled="!!CSVData"
 			/>
 			<div v-if="!!CSVData">
+				<div class="items-csv-merge-row">
+					<v-checkbox
+						class="items-csv-merge-checkbox"
+						id="merge"
+						:value="shouldMerge"
+						:label="$t('Merge with existing items')"
+						:inputValue="shouldMerge"
+						v-model="shouldMerge"
+					/>
+				</div>
+
+				<div class="items-csv-merge-row" v-if="shouldMerge">
+					<p class="items-csv-merge-description">
+						{{
+							$t(
+								'CSV rows will merge with existing items if they match the following field:'
+							)
+						}}
+					</p>
+					<v-simple-select
+						class="items-csv-select"
+						v-model="mergeField"
+					>
+						<option
+							v-for="field in fields"
+							:key="field.field"
+							:value="field.field"
+							:selected="mergeField === field.field"
+						>
+							{{ $helpers.formatTitle(field.name) }}
+						</option>
+					</v-simple-select>
+				</div>
+
 				<h2 class="type-heading-medium">
 					Field Mappings
-					<v-button v-if="checkboxes.length" @click="uncheckAllFields()">
+					<v-button
+						v-if="checkboxes.length"
+						@click="uncheckAllFields()"
+					>
 						{{ $t('Uncheck All') }}
 					</v-button>
-					<v-button v-if="!checkboxes.length" @click="checkAllFields()">
+					<v-button
+						v-if="!checkboxes.length"
+						@click="checkAllFields()"
+					>
 						{{ $t('Check All') }}
 					</v-button>
 				</h2>
 
-				<div v-for="field in fields" :key="field.field" class="items-csv-row">
+				<div
+					v-for="field in fields"
+					:key="field.field"
+					class="items-csv-row"
+				>
 					<v-checkbox
 						class="items-csv-checkbox"
 						:id="field.field"
@@ -61,7 +107,9 @@
 							v-for="title in CSVData.titles"
 							:key="title"
 							:value="title"
-							:selected="CSVData.mappedTitles[field.name] === title"
+							:selected="
+								CSVData.mappedTitles[field.name] === title
+							"
 						>
 							{{ $helpers.formatTitle(title) }}
 						</option>
@@ -104,7 +152,9 @@ export default {
 			confirmRemove: false,
 			notFound: false,
 			checkboxes: [],
-			CSVData: null
+			CSVData: null,
+			shouldMerge: false,
+			mergeField: null
 		};
 	},
 	created() {
@@ -154,8 +204,12 @@ export default {
 			if (this.collection.startsWith('directus_')) {
 				return [
 					{
-						name: this.$helpers.formatTitle(this.collection.substr(9)),
-						path: `/${this.currentProjectKey}/${this.collection.substring(9)}`
+						name: this.$helpers.formatTitle(
+							this.collection.substr(9)
+						),
+						path: `/${
+							this.currentProjectKey
+						}/${this.collection.substring(9)}`
 					}
 				];
 			} else {
@@ -176,7 +230,8 @@ export default {
 			}
 		},
 		fields() {
-			const fields = this.$store.state.collections[this.collection].fields;
+			const fields = this.$store.state.collections[this.collection]
+				.fields;
 			const fieldsArray = Object.values(fields).map(field => ({
 				...field,
 				name: this.$helpers.formatField(field.field, field.collection)
@@ -189,13 +244,16 @@ export default {
 			return filteredFields;
 		},
 		batchURL() {
-			return `/${this.currentProjectKey}/collections/${this.collection}/${this.selection
+			return `/${this.currentProjectKey}/collections/${
+				this.collection
+			}/${this.selection
 				.map(item => item[this.primaryKeyField])
 				.join(',')}`;
 		},
 
 		collection() {
-			if (this.$route.path.endsWith('webhooks')) return 'directus_webhooks';
+			if (this.$route.path.endsWith('webhooks'))
+				return 'directus_webhooks';
 			return this.$route.params.collection;
 		},
 		collectionInfo() {
@@ -206,13 +264,17 @@ export default {
 		},
 
 		filterableFieldNames() {
-			return this.fields.filter(field => field.datatype).map(field => field.field);
+			return this.fields
+				.filter(field => field.datatype)
+				.map(field => field.field);
 		},
 		layoutNames() {
 			if (!this.$store.state.extensions.layouts) return {};
 			const translatedNames = {};
 			Object.keys(this.$store.state.extensions.layouts).forEach(id => {
-				translatedNames[id] = this.$store.state.extensions.layouts[id].name;
+				translatedNames[id] = this.$store.state.extensions.layouts[
+					id
+				].name;
 			});
 			return translatedNames;
 		},
@@ -225,7 +287,8 @@ export default {
 			return icons;
 		},
 		statusField() {
-			const fields = this.$store.state.collections[this.collection].fields;
+			const fields = this.$store.state.collections[this.collection]
+				.fields;
 			if (!fields) return null;
 			let fieldsObj = find(fields, { type: 'status' });
 			return fieldsObj && fieldsObj.field ? fieldsObj.field : null;
@@ -235,25 +298,32 @@ export default {
 		// This will make the delete button update the item to the hidden status
 		// instead of deleting it completely from the database
 		softDeleteStatus() {
-			if (!this.collectionInfo.status_mapping || !this.statusField) return null;
+			if (!this.collectionInfo.status_mapping || !this.statusField)
+				return null;
 
 			const statusKeys = Object.keys(this.collectionInfo.status_mapping);
-			const index = findIndex(Object.values(this.collectionInfo.status_mapping), {
-				soft_delete: true
-			});
+			const index = findIndex(
+				Object.values(this.collectionInfo.status_mapping),
+				{
+					soft_delete: true
+				}
+			);
 			return statusKeys[index];
 		},
 
 		userCreatedField() {
 			if (!this.fields) return null;
 			const fields =
-				find(Object.values(this.fields), field => field.type.toLowerCase() === 'owner') ||
-				{};
+				find(
+					Object.values(this.fields),
+					field => field.type.toLowerCase() === 'owner'
+				) || {};
 
 			return fields.field;
 		},
 		primaryKeyField() {
-			const fields = this.$store.state.collections[this.collection].fields;
+			const fields = this.$store.state.collections[this.collection]
+				.fields;
 			if (!fields) return null;
 			let fieldsObj = find(fields, { primary_key: true });
 			return fieldsObj && fieldsObj.field ? fieldsObj.field : null;
@@ -306,12 +376,16 @@ export default {
 				});
 
 				if (this.collection === 'directus_webhooks') {
-					return this.$router.push(`/${this.currentProjectKey}/settings/webhooks`);
+					return this.$router.push(
+						`/${this.currentProjectKey}/settings/webhooks`
+					);
 				}
 
 				if (this.collection.startsWith('directus_')) {
 					return this.$router.push(
-						`/${this.currentProjectKey}/${this.collection.substring(9)}`
+						`/${this.currentProjectKey}/${this.collection.substring(
+							9
+						)}`
 					);
 				}
 
@@ -326,20 +400,26 @@ export default {
 					this.checkboxes.includes(field.field) &&
 					!!this.CSVData.mappedTitles[field.name]
 				) {
-					acc[field.name] = this.CSVData.dataMap[this.CSVData.mappedTitles[field.name]];
+					acc[field.name] = this.CSVData.dataMap[
+						this.CSVData.mappedTitles[field.name]
+					];
 				}
 
 				return acc;
 			}, {});
 
-			const create = new Array(this.CSVData.dataLength).fill({}).map((_, index) => {
-				return this.fields.reduce((acc, field) => {
-					if (mappedValues[field.name])
-						acc[field.field] = mappedValues[field.name][index];
-					return acc;
-				}, {});
-			});
-			return this.$api.createItems(this.collection, create).then(res => res.data);
+			const create = new Array(this.CSVData.dataLength)
+				.fill({})
+				.map((_, index) => {
+					return this.fields.reduce((acc, field) => {
+						if (mappedValues[field.name])
+							acc[field.field] = mappedValues[field.name][index];
+						return acc;
+					}, {});
+				});
+			return this.$api
+				.createItems(this.collection, create)
+				.then(res => res.data);
 		},
 		async CSVUploaded(fileData) {
 			const {
@@ -381,12 +461,15 @@ export default {
 					dataArray.forEach(title => (acc[title] = []));
 					return acc;
 				}
-				dataArray.forEach((datum, datumIndex) => acc[titles[datumIndex]].push(datum));
+				dataArray.forEach((datum, datumIndex) =>
+					acc[titles[datumIndex]].push(datum)
+				);
 				return acc;
 			}, {});
 			const matchingCSVTitles = this.mapMatchingCSVTitles(titles);
 			const mappedTitles = this.fields.reduce((acc, field) => {
-				if (matchingCSVTitles.has(field.name)) acc[field.name] = field.name;
+				if (matchingCSVTitles.has(field.name))
+					acc[field.name] = field.name;
 				else acc[field.name] = null;
 				return acc;
 			}, {});
@@ -406,7 +489,8 @@ export default {
 
 			return titles.reduce((acc, title) => {
 				const formTitleIndex = formTitleIndexes.get(title);
-				if (Number.isInteger(formTitleIndex)) acc.set(title, formTitleIndex);
+				if (Number.isInteger(formTitleIndex))
+					acc.set(title, formTitleIndex);
 				return acc;
 			}, new Map());
 		},
@@ -422,7 +506,9 @@ export default {
 		},
 		editCollection() {
 			if (!this.$store.state.currentUser.admin) return;
-			this.$router.push(`/${this.currentProjectKey}/settings/collections/${this.collection}`);
+			this.$router.push(
+				`/${this.currentProjectKey}/settings/collections/${this.collection}`
+			);
 		},
 		remove() {
 			const id = this.$helpers.shortid.generate();
@@ -430,12 +516,18 @@ export default {
 
 			let request;
 
-			const itemKeys = this.selection.map(item => item[this.primaryKeyField]);
+			const itemKeys = this.selection.map(
+				item => item[this.primaryKeyField]
+			);
 
 			if (this.softDeleteStatus) {
-				request = this.$api.updateItem(this.collection, itemKeys.join(','), {
-					[this.statusField]: this.softDeleteStatus
-				});
+				request = this.$api.updateItem(
+					this.collection,
+					itemKeys.join(','),
+					{
+						[this.statusField]: this.softDeleteStatus
+					}
+				);
 			} else {
 				request = this.$api.deleteItems(
 					this.collection,
@@ -466,12 +558,17 @@ export default {
 
 		const collectionInfo = store.state.collections[collection] || null;
 
-		if (collection.startsWith('directus_') === false && collectionInfo === null) {
+		if (
+			collection.startsWith('directus_') === false &&
+			collectionInfo === null
+		) {
 			return next(vm => (vm.notFound = true));
 		}
 
 		if (collectionInfo && collectionInfo.single) {
-			return next(`/${store.state.currentProjectKey}/collections/${collection}/1`);
+			return next(
+				`/${store.state.currentProjectKey}/collections/${collection}/1`
+			);
 		}
 
 		const id = shortid.generate();
@@ -501,15 +598,21 @@ export default {
 		this.meta = {};
 		this.notFound = false;
 
-		const collectionInfo = this.$store.state.collections[collection] || null;
+		const collectionInfo =
+			this.$store.state.collections[collection] || null;
 
-		if (collection.startsWith('directus_') === false && collectionInfo === null) {
+		if (
+			collection.startsWith('directus_') === false &&
+			collectionInfo === null
+		) {
 			this.notFound = true;
 			return next();
 		}
 
 		if (collectionInfo && collectionInfo.single) {
-			return next(`/${this.$store.state.currentProjectKey}/collections/${collection}/1`);
+			return next(
+				`/${this.$store.state.currentProjectKey}/collections/${collection}/1`
+			);
 		}
 
 		const id = this.$helpers.shortid.generate();
@@ -539,7 +642,8 @@ export default {
 }
 
 .items-csv {
-	padding: var(--page-padding-top-table) var(--page-padding) var(--page-padding-bottom);
+	padding: var(--page-padding-top-table) var(--page-padding)
+		var(--page-padding-bottom);
 
 	h2 {
 		margin-top: 32px;
@@ -552,6 +656,21 @@ export default {
 		margin-top: 16px;
 		display: flex;
 		align-items: center;
+	}
+
+	&-merge {
+		&-checkbox {
+			display: block;
+			width: 100%;
+		}
+		&-row {
+			width: 100%;
+			margin-top: 8px;
+		}
+		&-description {
+			display: block;
+			margin-bottom: 8px;
+		}
 	}
 
 	&-checkbox {
