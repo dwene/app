@@ -39,7 +39,6 @@
 					<v-checkbox
 						class="items-csv-merge-checkbox"
 						id="merge"
-						:value="shouldMerge"
 						:label="$t('Merge with existing items')"
 						:inputValue="shouldMerge"
 						v-model="shouldMerge"
@@ -131,8 +130,11 @@ import store from '../store/';
 import VNotFound from './not-found.vue';
 import { mapState } from 'vuex';
 import { isEqual, isEmpty, isNil, find, findIndex, keyBy } from 'lodash';
+import * as moment from 'moment';
 
 import api from '../api';
+
+const supportedFieldTypes = ['string', 'integer', 'date'];
 
 export default {
 	name: 'ItemsCSV',
@@ -239,7 +241,10 @@ export default {
 
 			//Filter out hidden_browser items.
 			let filteredFields = fieldsArray.filter(
-				field => !field.hidden_browse && !field.readonly
+				field =>
+					!field.hidden_browse &&
+					!field.readonly &&
+					supportedFieldTypes.indexOf(field.type) > -1
 			);
 			return filteredFields;
 		},
@@ -364,13 +369,11 @@ export default {
 			const id = this.$helpers.shortid.generate();
 			this.$store.dispatch('loadingStart', { id });
 
-			return this.saveCSVData().then(savedValues => {
+			return this.saveCSVData().then(result => {
 				this.$store.dispatch('loadingFinished', id);
 				this.saving = false;
 				this.$notify({
-					title: this.$tc('item_saved', savedValues.length, {
-						count: savedValues.length
-					}),
+					title: `${result.createdCount} items created, ${result.updatedCount} items updated.`,
 					color: 'green',
 					iconMain: 'check'
 				});
@@ -394,6 +397,75 @@ export default {
 				);
 			});
 		},
+		formatCSVDataForSave(field, data) {
+			const format = {
+				date: value => moment(value).format('YYYY-MM-DD'),
+				integer: value => {
+					const int = parseInt(value, 10);
+					return isNaN(int) ? null : value;
+				},
+				string: value => value
+			};
+			return format.hasOwnProperty(field.type)
+				? format[field.type](data)
+				: null;
+		},
+
+		createAndMerge(pendingItems) {
+			if (this.mergeField && this.shouldMerge) {
+				return this.$api
+					.getItems(this.collection, {
+						fields: '*.*.*'
+					})
+					.then(res => {
+						const existingItems = res.data;
+						const itemsToCreate = [];
+						const itemsToUpdate = [];
+
+						pendingItems.forEach(pending => {
+							const matchedExisting = existingItems.find(
+								existing =>
+									existing[this.mergeField] ===
+									pending[this.mergeField]
+							);
+							if (matchedExisting) {
+								return itemsToUpdate.push({
+									...matchedExisting,
+									...pending
+								});
+							}
+							return itemsToCreate.push(pending);
+						});
+
+						const createPromise =
+							itemsToCreate.length > 0
+								? this.$api.createItems(
+										this.collection,
+										itemsToCreate
+								  )
+								: Promise.resolve();
+
+						const updatePromise =
+							itemsToUpdate.length > 0
+								? this.$api.updateItems(
+										this.collection,
+										itemsToUpdate
+								  )
+								: Promise.resolve();
+
+						return createPromise
+							.then(() => updatePromise)
+							.then(() => ({
+								createdCount: itemsToCreate.length,
+								updatedCount: itemsToUpdate.length
+							}));
+					});
+			}
+
+			return this.$api
+				.createItems(this.collection, pendingItems)
+				.then(res => ({ createdCount: pendingItems.count }));
+		},
 		saveCSVData() {
 			const mappedValues = this.fields.reduce((acc, field) => {
 				if (
@@ -408,18 +480,19 @@ export default {
 				return acc;
 			}, {});
 
-			const create = new Array(this.CSVData.dataLength)
+			const pendingItems = new Array(this.CSVData.dataLength)
 				.fill({})
 				.map((_, index) => {
 					return this.fields.reduce((acc, field) => {
 						if (mappedValues[field.name])
-							acc[field.field] = mappedValues[field.name][index];
+							acc[field.field] = this.formatCSVDataForSave(
+								field,
+								mappedValues[field.name][index]
+							);
 						return acc;
 					}, {});
 				});
-			return this.$api
-				.createItems(this.collection, create)
-				.then(res => res.data);
+			return this.createAndMerge(pendingItems);
 		},
 		async CSVUploaded(fileData) {
 			const {
