@@ -389,7 +389,6 @@ export default {
 		remove() {
 			const id = this.$helpers.shortid.generate();
 			this.$store.dispatch('loadingStart', { id });
-
 			this.$api
 				.deleteItems(
 					this.collection,

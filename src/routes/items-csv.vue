@@ -20,7 +20,6 @@
 					icon-color="button-primary-text-color"
 					background-color="button-primary-background-color"
 					:label="$t('new')"
-					:to="createLink"
 					@click="saveCSVUpload"
 				/>
 			</template>
@@ -57,7 +56,6 @@
 					<v-simple-select
 						class="items-csv-select"
 						v-model="CSVData.mappedTitles[field.name]"
-						@input="selectCSVTitle(field.name, $event)"
 					>
 						<option
 							v-for="title in CSVData.titles"
@@ -120,17 +118,6 @@ export default {
 		breadcrumbIcon() {
 			if (this.collection === 'directus_webhooks') return 'arrow_back';
 			return this.collectionInfo?.icon || 'box';
-		},
-		createLink() {
-			if (this.collection === 'directus_webhooks') {
-				return `/${this.currentProjectKey}/settings/webhooks/+`;
-			}
-
-			if (this.collection.startsWith('directus_')) {
-				return `/${this.currentProjectKey}/${this.collection.substr(9)}/+`;
-			}
-
-			return `/${this.currentProjectKey}/collections/${this.collection}/+`;
 		},
 		breadcrumb() {
 			if (this.collection === 'directus_users') {
@@ -303,13 +290,62 @@ export default {
 	methods: {
 		saveCSVUpload() {
 			//TODO: figure out how to save the CSV data to the collection
-			console.log('save CSV data to collection');
+
+			const id = this.$helpers.shortid.generate();
+			this.$store.dispatch('loadingStart', { id });
+
+			return this.saveCSVData().then(savedValues => {
+				this.$store.dispatch('loadingFinished', id);
+				this.saving = false;
+				this.$notify({
+					title: this.$tc('item_saved', savedValues.length, {
+						count: savedValues.length
+					}),
+					color: 'green',
+					iconMain: 'check'
+				});
+
+				if (this.collection === 'directus_webhooks') {
+					return this.$router.push(`/${this.currentProjectKey}/settings/webhooks`);
+				}
+
+				if (this.collection.startsWith('directus_')) {
+					return this.$router.push(
+						`/${this.currentProjectKey}/${this.collection.substring(9)}`
+					);
+				}
+
+				return this.$router.push(
+					`/${this.currentProjectKey}/collections/${this.collection}`
+				);
+			});
+		},
+		saveCSVData() {
+			const mappedValues = this.fields.reduce((acc, field) => {
+				if (
+					this.checkboxes.includes(field.field) &&
+					!!this.CSVData.mappedTitles[field.name]
+				) {
+					acc[field.name] = this.CSVData.dataMap[this.CSVData.mappedTitles[field.name]];
+				}
+
+				return acc;
+			}, {});
+
+			const create = new Array(this.CSVData.dataLength).fill({}).map((_, index) => {
+				return this.fields.reduce((acc, field) => {
+					if (mappedValues[field.name])
+						acc[field.field] = mappedValues[field.name][index];
+					return acc;
+				}, {});
+			});
+			return this.$api.createItems(this.collection, create).then(res => res.data);
 		},
 		async CSVUploaded(fileData) {
-			console.log(fileData);
 			const {
 				data: {
 					data: {
+						id: fileId,
 						data: { full_url }
 					}
 				}
@@ -318,12 +354,27 @@ export default {
 			const text = await response.text();
 			const CSVData = this.$helpers.parseCSV(text);
 			this.CSVData = this.formatCSVData(CSVData);
-			console.log('>>>1', CSVData);
-			console.log('>>>2', this.fields);
 			const CSVTitles = CSVData[0];
+
+			const id = this.$helpers.shortid.generate();
+			this.$store.dispatch('loadingStart', { id });
+
+			this.$api
+				.deleteItem('directus_files', fileId)
+				.then(() => {
+					this.$store.dispatch('loadingFinished', id);
+				})
+				.catch(error => {
+					this.$store.dispatch('loadingFinished', id);
+					this.$events.emit('error', {
+						notify: this.$t('something_went_wrong_body'),
+						error
+					});
+				});
 		},
 		formatCSVData(data) {
 			const titles = data[0];
+			const dataLength = data.length - 1;
 			const dataMap = data.reduce((acc, dataArray, index) => {
 				if (!dataArray.length) return acc;
 				if (index === 0) {
@@ -343,12 +394,9 @@ export default {
 			return {
 				titles,
 				dataMap,
-				mappedTitles
+				mappedTitles,
+				dataLength
 			};
-		},
-		selectCSVTitle(fieldName, title) {
-			// this.CSVData.mappedTitles[fieldName] = title;
-			console.log(this.CSVData.mappedTitles);
 		},
 		mapMatchingCSVTitles(titles) {
 			const formTitleIndexes = this.fields.reduce((acc, field, index) => {
@@ -364,7 +412,6 @@ export default {
 		},
 		checkAllFields() {
 			this.checkboxes = this.fields.map(({ field }) => field);
-			console.log('>>>5', this.checkboxes);
 		},
 		uncheckAllFields() {
 			this.checkboxes = [];
