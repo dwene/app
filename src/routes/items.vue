@@ -9,7 +9,9 @@
 			:settings="collection === 'directus_webhooks'"
 			:title="currentBookmark && currentBookmark.title"
 			:icon-link="
-				collection === 'directus_webhooks' ? `/${currentProjectKey}/settings/` : null
+				collection === 'directus_webhooks'
+					? `/${currentProjectKey}/settings/`
+					: null
 			"
 		>
 			<template slot="title">
@@ -99,16 +101,28 @@
 				<div class="layout-picker">
 					<select
 						:value="viewType"
-						@input="updatePreferences('view_type', $event.target.value)"
+						@input="
+							updatePreferences('view_type', $event.target.value)
+						"
 					>
-						<option v-for="(name, val) in layoutNames" :key="val" :value="val">
+						<option
+							v-for="(name, val) in layoutNames"
+							:key="val"
+							:value="val"
+						>
 							{{ name }}
 						</option>
 					</select>
 					<div class="preview">
-						<v-icon :name="layoutIcons[viewType]" color="--sidebar-text-color" />
+						<v-icon
+							:name="layoutIcons[viewType]"
+							color="--sidebar-text-color"
+						/>
 						<span class="label">{{ layoutNames[viewType] }}</span>
-						<v-icon name="expand_more" color="--sidebar-text-color" />
+						<v-icon
+							name="expand_more"
+							color="--sidebar-text-color"
+						/>
 					</div>
 				</div>
 			</template>
@@ -189,7 +203,9 @@ export default {
 	},
 	computed: {
 		addButtonOptions() {
-			return { uploadCSV: { text: this.$t('Upload CSV'), icon: 'cloud_upload' } };
+			return {
+				uploadCSV: { text: this.$t('Upload CSV'), icon: 'cloud_upload' }
+			};
 		},
 		...mapState(['currentProjectKey']),
 		activity() {
@@ -205,7 +221,9 @@ export default {
 			}
 
 			if (this.collection.startsWith('directus_')) {
-				return `/${this.currentProjectKey}/${this.collection.substr(9)}/+`;
+				return `/${this.currentProjectKey}/${this.collection.substr(
+					9
+				)}/+`;
 			}
 
 			return `/${this.currentProjectKey}/collections/${this.collection}/+`;
@@ -245,8 +263,12 @@ export default {
 			if (this.collection.startsWith('directus_')) {
 				return [
 					{
-						name: this.$helpers.formatTitle(this.collection.substr(9)),
-						path: `/${this.currentProjectKey}/${this.collection.substring(9)}`
+						name: this.$helpers.formatTitle(
+							this.collection.substr(9)
+						),
+						path: `/${
+							this.currentProjectKey
+						}/${this.collection.substring(9)}`
 					}
 				];
 			} else {
@@ -263,19 +285,24 @@ export default {
 			}
 		},
 		fields() {
-			const fields = this.$store.state.collections[this.collection].fields;
+			const fields = this.$store.state.collections[this.collection]
+				.fields;
 			const fieldsArray = Object.values(fields).map(field => ({
 				...field,
 				name: this.$helpers.formatField(field.field, field.collection)
 			}));
 
 			//Filter out hidden_browser items.
-			let filteredFields = fieldsArray.filter(field => field.hidden_browse !== true);
+			let filteredFields = fieldsArray.filter(
+				field => field.hidden_browse !== true
+			);
 
 			return filteredFields;
 		},
 		batchURL() {
-			return `/${this.currentProjectKey}/collections/${this.collection}/${this.selection
+			return `/${this.currentProjectKey}/collections/${
+				this.collection
+			}/${this.selection
 				.map(item => item[this.primaryKeyField])
 				.join(',')}`;
 		},
@@ -305,7 +332,8 @@ export default {
 			return currentBookmark || null;
 		},
 		collection() {
-			if (this.$route.path.endsWith('webhooks')) return 'directus_webhooks';
+			if (this.$route.path.endsWith('webhooks'))
+				return 'directus_webhooks';
 			return this.$route.params.collection;
 		},
 		collectionInfo() {
@@ -337,7 +365,9 @@ export default {
 			}));
 
 			const viewQuery =
-				(this.preferences.view_query && this.preferences.view_query[this.viewType]) || {};
+				(this.preferences.view_query &&
+					this.preferences.view_query[this.viewType]) ||
+				{};
 
 			// Filter out the fieldnames of fields that don't exist anymore
 			// Sorting / querying fields that don't exist anymore will return
@@ -348,7 +378,9 @@ export default {
 			if (viewQuery.fields) {
 				viewQuery.fields = viewQuery.fields
 					.split(',')
-					.filter(fieldName => collectionFieldNames.includes(fieldName))
+					.filter(fieldName =>
+						collectionFieldNames.includes(fieldName)
+					)
 					.join(',');
 			}
 
@@ -370,7 +402,8 @@ export default {
 		viewOptions() {
 			if (!this.preferences) return {};
 			return (
-				(this.preferences.view_options && this.preferences.view_options[this.viewType]) ||
+				(this.preferences.view_options &&
+					this.preferences.view_options[this.viewType]) ||
 				{}
 			);
 		},
@@ -379,13 +412,17 @@ export default {
 
 			const isFiltering =
 				!isEmpty(this.preferences.filters) ||
-				(!isNil(this.preferences.search_query) && this.preferences.search_query.length > 0);
+				(!isNil(this.preferences.search_query) &&
+					this.preferences.search_query.length > 0);
 
 			// We're showing the collection total count, until we hit the last page of infinite scrolling.
 			// At that point, we'll rely on the local count that's being set by the items.vue child component
 			let count = this.meta.total_count;
 
-			if (this.meta.result_count < this.$store.state.settings.values.default_limit) {
+			if (
+				this.meta.result_count <
+				this.$store.state.settings.values.default_limit
+			) {
 				count = this.meta.local_count;
 			}
 
@@ -398,13 +435,17 @@ export default {
 				  });
 		},
 		filterableFieldNames() {
-			return this.fields.filter(field => field.datatype).map(field => field.field);
+			return this.fields
+				.filter(field => field.datatype)
+				.map(field => field.field);
 		},
 		layoutNames() {
 			if (!this.$store.state.extensions.layouts) return {};
 			const translatedNames = {};
 			Object.keys(this.$store.state.extensions.layouts).forEach(id => {
-				translatedNames[id] = this.$store.state.extensions.layouts[id].name;
+				translatedNames[id] = this.$store.state.extensions.layouts[
+					id
+				].name;
 			});
 			return translatedNames;
 		},
@@ -417,7 +458,8 @@ export default {
 			return icons;
 		},
 		statusField() {
-			const fields = this.$store.state.collections[this.collection].fields;
+			const fields = this.$store.state.collections[this.collection]
+				.fields;
 			if (!fields) return null;
 			let fieldsObj = find(fields, { type: 'status' });
 			return fieldsObj && fieldsObj.field ? fieldsObj.field : null;
@@ -427,12 +469,16 @@ export default {
 		// This will make the delete button update the item to the hidden status
 		// instead of deleting it completely from the database
 		softDeleteStatus() {
-			if (!this.collectionInfo.status_mapping || !this.statusField) return null;
+			if (!this.collectionInfo.status_mapping || !this.statusField)
+				return null;
 
 			const statusKeys = Object.keys(this.collectionInfo.status_mapping);
-			const index = findIndex(Object.values(this.collectionInfo.status_mapping), {
-				soft_delete: true
-			});
+			const index = findIndex(
+				Object.values(this.collectionInfo.status_mapping),
+				{
+					soft_delete: true
+				}
+			);
 			return statusKeys[index];
 		},
 
@@ -440,12 +486,15 @@ export default {
 			if (!this.fields) return null;
 
 			return (
-				find(Object.values(this.fields), field => field.type.toLowerCase() === 'owner') ||
-				{}
+				find(
+					Object.values(this.fields),
+					field => field.type.toLowerCase() === 'owner'
+				) || {}
 			).field;
 		},
 		primaryKeyField() {
-			const fields = this.$store.state.collections[this.collection].fields;
+			const fields = this.$store.state.collections[this.collection]
+				.fields;
 			if (!fields) return null;
 			let fieldsObj = find(fields, { primary_key: true });
 			return fieldsObj && fieldsObj.field ? fieldsObj.field : null;
@@ -484,7 +533,9 @@ export default {
 				const permission = this.statusField
 					? this.permission.statuses[status]
 					: this.permission;
-				const userID = item[this.userCreatedField] ? item[this.userCreatedField].id : null;
+				const userID = item[this.userCreatedField]
+					? item[this.userCreatedField].id
+					: null;
 
 				if (permission.delete === 'none') {
 					return (enabled = false);
@@ -496,7 +547,8 @@ export default {
 
 				if (permission.delete === 'role') {
 					const userRole = this.$store.state.users[userID].role;
-					const currentUserRole = this.$store.state.currentUser.role.id;
+					const currentUserRole = this.$store.state.currentUser.role
+						.id;
 
 					if (userRole === currentUserRole) {
 						enabled = true;
@@ -523,7 +575,9 @@ export default {
 				const permission = this.statusField
 					? this.permission.statuses[status]
 					: this.permission;
-				const userID = item[this.userCreatedField] ? item[this.userCreatedField].id : null;
+				const userID = item[this.userCreatedField]
+					? item[this.userCreatedField].id
+					: null;
 
 				if (permission.update === 'none') {
 					return (enabled = false);
@@ -535,7 +589,8 @@ export default {
 
 				if (permission.update === 'role') {
 					const userRole = this.$store.state.users[userID].role;
-					const currentUserRole = this.$store.state.currentUser.role.id;
+					const currentUserRole = this.$store.state.currentUser.role
+						.id;
 
 					if (userRole === currentUserRole) {
 						enabled = true;
@@ -558,8 +613,9 @@ export default {
 	},
 	methods: {
 		uploadCSV(event) {
-			if (!this.$store.state.currentUser.admin) return;
-			this.$router.push(`/${this.currentProjectKey}/collections/${this.collection}/csv`);
+			this.$router.push(
+				`/${this.currentProjectKey}/collections/${this.collection}/csv`
+			);
 		},
 		keyBy: keyBy,
 		setMeta(meta) {
@@ -567,7 +623,9 @@ export default {
 		},
 		editCollection() {
 			if (!this.$store.state.currentUser.admin) return;
-			this.$router.push(`/${this.currentProjectKey}/settings/collections/${this.collection}`);
+			this.$router.push(
+				`/${this.currentProjectKey}/settings/collections/${this.collection}`
+			);
 		},
 		closeBookmark() {
 			this.bookmarkModal = false;
@@ -661,12 +719,18 @@ export default {
 
 			let request;
 
-			const itemKeys = this.selection.map(item => item[this.primaryKeyField]);
+			const itemKeys = this.selection.map(
+				item => item[this.primaryKeyField]
+			);
 
 			if (this.softDeleteStatus) {
-				request = this.$api.updateItem(this.collection, itemKeys.join(','), {
-					[this.statusField]: this.softDeleteStatus
-				});
+				request = this.$api.updateItem(
+					this.collection,
+					itemKeys.join(','),
+					{
+						[this.statusField]: this.softDeleteStatus
+					}
+				);
 			} else {
 				request = this.$api.deleteItems(
 					this.collection,
@@ -697,12 +761,17 @@ export default {
 
 		const collectionInfo = store.state.collections[collection] || null;
 
-		if (collection.startsWith('directus_') === false && collectionInfo === null) {
+		if (
+			collection.startsWith('directus_') === false &&
+			collectionInfo === null
+		) {
 			return next(vm => (vm.notFound = true));
 		}
 
 		if (collectionInfo && collectionInfo.single) {
-			return next(`/${store.state.currentProjectKey}/collections/${collection}/1`);
+			return next(
+				`/${store.state.currentProjectKey}/collections/${collection}/1`
+			);
 		}
 
 		const id = shortid.generate();
@@ -732,15 +801,21 @@ export default {
 		this.meta = {};
 		this.notFound = false;
 
-		const collectionInfo = this.$store.state.collections[collection] || null;
+		const collectionInfo =
+			this.$store.state.collections[collection] || null;
 
-		if (collection.startsWith('directus_') === false && collectionInfo === null) {
+		if (
+			collection.startsWith('directus_') === false &&
+			collectionInfo === null
+		) {
 			this.notFound = true;
 			return next();
 		}
 
 		if (collectionInfo && collectionInfo.single) {
-			return next(`/${this.$store.state.currentProjectKey}/collections/${collection}/1`);
+			return next(
+				`/${this.$store.state.currentProjectKey}/collections/${collection}/1`
+			);
 		}
 
 		const id = this.$helpers.shortid.generate();
