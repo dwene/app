@@ -402,7 +402,7 @@ export default {
 				date: value => moment(value).format('YYYY-MM-DD'),
 				integer: value => {
 					const int = parseInt(value, 10);
-					return isNaN(int) ? null : value;
+					return isNaN(int) ? null : Math.round(value);
 				},
 				string: value => value
 			};
