@@ -22,6 +22,7 @@
 					icon-color="button-primary-text-color"
 					background-color="button-primary-background-color"
 					:label="$t('new')"
+					:disabled="!!uploadingItems"
 					@click="saveCSVUpload"
 				/>
 			</template>
@@ -34,6 +35,17 @@
 				@upload="CSVUploaded"
 				:disabled="!!CSVData"
 			/>
+
+			<div v-if="processingCSV" class="items-csv-processing">
+				CSV processing. Please wait a moment.
+				<v-spinner class="spinner"></v-spinner>
+			</div>
+
+			<div v-if="uploadingItems" class="items-csv-processing">
+				Uploading batch {{ uploadingItems.currentBatch }} of
+				{{ uploadingItems.batchCount }}
+				<v-spinner class="spinner"></v-spinner>
+			</div>
 			<div v-if="!!CSVData">
 				<div class="items-csv-merge-row">
 					<v-checkbox
@@ -156,7 +168,9 @@ export default {
 			checkboxes: [],
 			CSVData: null,
 			shouldMerge: false,
-			mergeField: null
+			mergeField: null,
+			processingCSV: false,
+			uploadingItems: null
 		};
 	},
 	created() {
@@ -364,8 +378,6 @@ export default {
 	},
 	methods: {
 		saveCSVUpload() {
-			//TODO: figure out how to save the CSV data to the collection
-
 			const id = this.$helpers.shortid.generate();
 			this.$store.dispatch('loadingStart', { id });
 
@@ -411,60 +423,80 @@ export default {
 				: null;
 		},
 
-		createAndMerge(pendingItems) {
-			if (this.mergeField && this.shouldMerge) {
-				return this.$api
-					.getItems(this.collection, {
-						fields: '*.*.*'
-					})
-					.then(res => {
-						const existingItems = res.data;
-						const itemsToCreate = [];
-						const itemsToUpdate = [];
+		createAndMergeBatch(existingItems, pendingItems) {
+			const itemsToCreate = [];
+			const itemsToUpdate = [];
 
-						pendingItems.forEach(pending => {
-							const matchedExisting = existingItems.find(
-								existing =>
-									existing[this.mergeField] ===
-									pending[this.mergeField]
-							);
-							if (matchedExisting) {
-								return itemsToUpdate.push({
-									...matchedExisting,
-									...pending
-								});
-							}
-							return itemsToCreate.push(pending);
-						});
-
-						const createPromise =
-							itemsToCreate.length > 0
-								? this.$api.createItems(
-										this.collection,
-										itemsToCreate
-								  )
-								: Promise.resolve();
-
-						const updatePromise =
-							itemsToUpdate.length > 0
-								? this.$api.updateItems(
-										this.collection,
-										itemsToUpdate
-								  )
-								: Promise.resolve();
-
-						return createPromise
-							.then(() => updatePromise)
-							.then(() => ({
-								createdCount: itemsToCreate.length,
-								updatedCount: itemsToUpdate.length
-							}));
+			pendingItems.forEach(pending => {
+				const matchedExisting = existingItems.find(
+					existing =>
+						existing[this.mergeField] === pending[this.mergeField]
+				);
+				if (matchedExisting) {
+					return itemsToUpdate.push({
+						...matchedExisting,
+						...pending
 					});
-			}
+				}
+				return itemsToCreate.push(pending);
+			});
 
-			return this.$api
-				.createItems(this.collection, pendingItems)
-				.then(res => ({ createdCount: pendingItems.count }));
+			const createPromise =
+				itemsToCreate.length > 0
+					? this.$api.createItems(this.collection, itemsToCreate)
+					: Promise.resolve();
+
+			const updatePromise =
+				itemsToUpdate.length > 0
+					? this.$api.updateItems(this.collection, itemsToUpdate)
+					: Promise.resolve();
+
+			return createPromise
+				.then(() => updatePromise)
+				.then(() => ({
+					createdCount: itemsToCreate.length,
+					updatedCount: itemsToUpdate.length
+				}));
+		},
+		createAndMerge(pendingItems) {
+			const batchedPendingItems = [];
+			const pendingItemsCopy = [...pendingItems];
+			while (pendingItemsCopy.length > 0) {
+				const chunk = pendingItemsCopy.splice(0, 100);
+				batchedPendingItems.push(chunk);
+			}
+			this.uploadingItems = {
+				batchCount: batchedPendingItems.length,
+				currentBatch: 0
+			};
+			const existingItemsPromise =
+				this.mergeField && this.shouldMerge
+					? this.$api
+							.getItems(this.collection, {
+								fields: `${this.mergeField},id`,
+								limit: 5000
+							})
+							.then(response => response.data)
+					: Promise.resolve([]);
+			return existingItemsPromise.then(existingItems => {
+				return batchedPendingItems.reduce((previousPromise, batch) => {
+					return previousPromise.then(previous => {
+						this.uploadingItems.currentBatch += 1;
+						return this.createAndMergeBatch(
+							existingItems,
+							batch
+						).then(current =>
+							Promise.resolve({
+								createdCount:
+									current.createdCount +
+									previous.createdCount,
+								updatedCount:
+									current.updatedCount + previous.updatedCount
+							})
+						);
+					});
+				}, Promise.resolve({ createdCount: 0, updatedCount: 0 }));
+			});
 		},
 		saveCSVData() {
 			const mappedValues = this.fields.reduce((acc, field) => {
@@ -503,6 +535,7 @@ export default {
 					}
 				}
 			} = fileData;
+			this.processingCSV = true;
 			const response = await fetch(full_url);
 			const text = await response.text();
 			const CSVData = this.$helpers.parseCSV(text);
@@ -516,6 +549,7 @@ export default {
 				.deleteItem('directus_files', fileId)
 				.then(() => {
 					this.$store.dispatch('loadingFinished', id);
+					this.processingCSV = false;
 				})
 				.catch(error => {
 					this.$store.dispatch('loadingFinished', id);
@@ -718,6 +752,28 @@ export default {
 	padding: var(--page-padding-top-table) var(--page-padding)
 		var(--page-padding-bottom);
 
+	&-processing {
+		font-size: 16px;
+		.v-spinner {
+			margin-left: 8px;
+		}
+		margin: 16px 0;
+		display: flex;
+		flex-direction: row;
+		justify-content: center;
+		align-items: center;
+	}
+	&-uploading {
+		font-size: 16px;
+		.v-spinner {
+			margin-left: 8px;
+		}
+		margin: 16px 0;
+		display: flex;
+		flex-direction: row;
+		justify-content: center;
+		align-items: center;
+	}
 	h2 {
 		margin-top: 32px;
 		display: flex;
